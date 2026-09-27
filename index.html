@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>무기 강화하기 - 버들 대장간 | 검·지팡이 강화 게임</title>
-<meta name="description" content="녹슨 단검과 부러진 나뭇가지를 +20 전설 무기로! 성공·유지·하락·파괴 확률을 이겨내고 검과 지팡이를 강화해 팔고, 다른 대장장이와 랜덤 대결로 골드를 버는 무료 검 강화 게임. 매일 출석 골드도 받아요.">
+<title>무기 강화하기 - 버들 대장간 | 검·지팡이·활 강화 게임</title>
+<meta name="description" content="녹슨 단검, 부러진 나뭇가지, 낡은 나무 활을 +20 전설 무기로! 성공·유지·하락·파괴 확률을 이겨내고 검·지팡이·활을 강화해 팔고, 다른 대장장이와 랜덤 대결로 골드를 버는 무료 검 강화 게임. 매일 출석 골드도 받아요.">
 <meta property="og:title" content="무기 강화하기 - 버들 대장간">
 <meta property="og:description" content="성공이냐 파괴냐! +20까지 무기를 강화해 보세요.">
 <meta name="google-site-verification" content="MvUY2g0-M_AKfOrNFpUJFnytvL8OPrw4plyCOSH2vSU">
@@ -15,7 +15,7 @@
 <body>
 <div class="app">
   <header class="top">
-    <a class="home" href="../">🌿 다른 게임</a>
+    <a class="home" href="../" title="버들플레이 다른 게임">🌿<span> 다른 게임</span></a>
     <div class="money"><span class="gold">💰 <b id="gold">0</b></span><span class="tix">⚔️ <b id="tickets">5/5</b></span></div>
     <div class="snd"><button type="button" id="musicBtn" title="배경음악">♪</button><button type="button" id="sfxBtn" title="효과음">🔔</button></div>
   </header>
@@ -23,7 +23,7 @@
   <section class="forge">
     <div class="title-row"><span class="lvl" id="lvl">+0</span><span class="sname" id="swordName"></span></div>
     <div class="best" id="best"></div>
-    <div class="wpick" id="weaponPick" hidden><button type="button" data-w="sword">⚔️ 검</button><button type="button" data-w="staff">🪄 지팡이</button></div>
+    <div class="wpick" id="weaponPick" hidden><button type="button" data-w="sword">⚔️ 검</button><button type="button" data-w="staff">🪄 지팡이</button><button type="button" data-w="bow">🏹 활</button></div>
     <div class="stage" id="stage">
       <canvas id="back"></canvas>
       <canvas id="sword"></canvas>

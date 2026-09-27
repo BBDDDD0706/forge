@@ -61,9 +61,34 @@ const STAFFS = [
   ['여명의 성장', '#fff4d8', '#ffd08a'],
   ['천년 버들 신목 지팡이', '#d8ffd0', '#7aff9a'],
 ];
+// 활 [이름, 조각 색, 빛 색]
+const BOWS = [
+  ['낡은 나무 활', '#6b5040', '#000000'],
+  ['사냥꾼의 활', '#8a6a48', '#000000'],
+  ['견습 궁수의 활', '#b09060', '#000000'],
+  ['주목 장궁', '#c09050', '#7ad88a'],
+  ['강철 복합궁', '#8a94a8', '#9fb4ff'],
+  ['기사단의 활', '#4a6ac8', '#5a8cff'],
+  ['은빛 엘프 활', '#eef3fa', '#e8f0ff'],
+  ['달빛 활', '#dce8ff', '#9fc3ff'],
+  ['황금 활', '#ffd65a', '#ffc53a'],
+  ['태양의 활', '#ffe38a', '#ffb02e'],
+  ['불꽃 활', '#ff9a4a', '#ff6a2a'],
+  ['용암 활', '#ff6a3a', '#ff3a1a'],
+  ['서리 활', '#bff4ff', '#5cd6ff'],
+  ['폭풍 활', '#a8d8ff', '#4aa8ff'],
+  ['번개 활', '#fff6a0', '#ffe030'],
+  ['별빛 활', '#e6d8ff', '#b48cff'],
+  ['용날개 활', '#ffb0c0', '#ff4a7a'],
+  ['심연의 활', '#9a7aff', '#6a3aff'],
+  ['천공의 활', '#d8fff4', '#4affc8'],
+  ['여명의 성궁', '#fff4d8', '#ffd08a'],
+  ['천년 버들 신궁', '#d8ffd0', '#7aff9a'],
+];
 const WEAP = {
   sword: { label: '검', icon: '⚔️', list: SWORDS, img: 's' },
   staff: { label: '지팡이', icon: '🪄', list: STAFFS, img: 'w' },
+  bow: { label: '활', icon: '🏹', list: BOWS, img: 'b' },
 };
 const MAX = SWORDS.length - 1;
 // 강화 확률 [성공, 유지, 하락, 파괴] (%)
@@ -413,7 +438,7 @@ function sell() {
   const l = S.level;
   if (busy || l === 0) return;
   const p = sellOf(l);
-  confirmBox(`+${l} ${items()[l][0]}을(를) 팔까요?`, `💰 ${won(p)} 골드를 받고, +0부터 다시 시작해요. 검과 지팡이 중 다시 고를 수 있어요.`, '팔기', () => {
+  confirmBox(`+${l} ${items()[l][0]}을(를) 팔까요?`, `💰 ${won(p)} 골드를 받고, +0부터 다시 시작해요. 무기 종류를 다시 고를 수 있어요.`, '팔기', () => {
     S.gold += p; S.sold++; S.earned += p; S.level = 0; showLevel = 0; save();
     Snd.play('coin'); burst(24, '#ffd65a'); result(`+${won(p)} 골드`, '판매 완료! +0부터 다시 시작해요', 'ok'); render();
   });
