@@ -1,4 +1,4 @@
-// 버들 대장간 — 검을 강화하고, 팔고, 대결하는 게임
+// 버들 대장간 — 무기(검·지팡이·활)를 강화하고, 팔고, 대결하는 게임
 const $ = (s) => document.querySelector(s);
 const rand = (a, b) => a + Math.random() * (b - a);
 const store = {
@@ -395,9 +395,10 @@ function enhance() {
       flashIt('#ff3a1a', 0.3); burst(24, '#ff8a4a', 0.8, W / 2, H * 0.55, Math.PI * 0.8, Math.PI / 2);
       Snd.play('down'); result('하락…', `+${S.level}로 떨어졌어요`, 'down');
     } else if (guardOn) {
-      Snd.play('keep'); SW.tint = 0.6; SW.tintCol = '#8fd0ff'; flashIt('#8fd0ff', 0.4);
+      S.level = l - 1; showLevel = S.level; SW.dy = 20; shake = 8;
+      Snd.play('down'); SW.tint = 0.6; SW.tintCol = '#8fd0ff'; flashIt('#8fd0ff', 0.4);
       ring('#8fd0ff', Math.min(W, H) * 0.45, 12, 0.8); burst(30, '#bfe6ff', 1, W / 2, H * 0.45);
-      result('방지권 발동!', '파괴될 뻔했지만 검을 지켰어요', 'keep');
+      result('방지권 발동!', `부서지진 않았지만 +${S.level}로 떨어졌어요`, 'down');
     } else {
       S.destroyed++; S.level = 0; shake = 22;
       Snd.play('destroy'); flashIt('#ff2a1a', 0.6); shatter(l); showLevel = -1;
@@ -414,7 +415,7 @@ function sell() {
   const p = sellOf(l);
   confirmBox(`+${l} ${items()[l][0]}을(를) 팔까요?`, `💰 ${won(p)} 골드를 받고, +0부터 다시 시작해요. 검과 지팡이 중 다시 고를 수 있어요.`, '팔기', () => {
     S.gold += p; S.sold++; S.earned += p; S.level = 0; showLevel = 0; save();
-    Snd.play('coin'); burst(24, '#ffd65a'); result(`+${won(p)} 골드`, '판매 완료! 새 검을 받았어요', 'ok'); render();
+    Snd.play('coin'); burst(24, '#ffd65a'); result(`+${won(p)} 골드`, '판매 완료! +0부터 다시 시작해요', 'ok'); render();
   });
 }
 
@@ -521,11 +522,11 @@ function openBattle() {
   Snd.play('click'); regenTickets();
   const d = document.createElement('div'); d.className = 'battle';
   const wait = S.tickets < TICKET_MAX ? Math.ceil((TICKET_MS - (Date.now() - S.ticketAt)) / 60000) : 0;
-  d.innerHTML = `<p class="lead">지금 든 검으로 다른 대장장이와 겨뤄요. 이기면 상대 검 값의 절반을 골드로 받아요.<br>진다고 검을 잃지는 않아요.</p>
+  d.innerHTML = `<p class="lead">지금 든 무기로 다른 대장장이와 겨뤄요. 이기면 상대 무기 값의 절반을 골드로 받아요.<br>진다고 무기를 잃지는 않아요.</p>
     <div class="nick-row"><label>내 이름</label><input id="nickIn" maxlength="10"><button class="btn ghost" id="nickDice" title="랜덤 이름">🎲</button></div>
     <div class="tix">⚔️ 도전권 <b>${S.tickets} / ${TICKET_MAX}</b>${wait ? ` <small>· ${wait}분 뒤 1장 충전</small>` : ''}</div>`;
   const b = document.createElement('button'); b.className = 'btn red big';
-  b.textContent = S.level === 0 ? '+1 이상 검이 있어야 대결할 수 있어요' : S.tickets <= 0 ? '도전권이 없어요' : '상대 찾기';
+  b.textContent = S.level === 0 ? '+1 이상 무기가 있어야 대결할 수 있어요' : S.tickets <= 0 ? '도전권이 없어요' : '상대 찾기';
   b.disabled = S.level === 0 || S.tickets <= 0;
   b.onclick = async () => {
     b.disabled = true; b.textContent = '상대를 찾는 중…';
@@ -589,7 +590,7 @@ function fight(opp) {
       const got = rewardOf(opp.level); S.gold += got; S.wins++;
       v.innerHTML = `<b class="w">승리!</b><span>💰 ${won(got)} 골드를 얻었어요</span>`; Snd.play('win'); me.classList.add('winner'); op.classList.add('loser'); arenaSparks(d, 40, '#ffe08a');
     } else {
-      S.losses++; v.innerHTML = `<b class="l">패배…</b><span>검은 무사해요. 다음엔 이길 거예요!</span>`; Snd.play('lose'); op.classList.add('winner'); me.classList.add('loser');
+      S.losses++; v.innerHTML = `<b class="l">패배…</b><span>무기는 무사해요. 다음엔 이길 거예요!</span>`; Snd.play('lose'); op.classList.add('winner'); me.classList.add('loser');
     }
     save(); render();
     const again = document.createElement('div'); again.className = 'row';
