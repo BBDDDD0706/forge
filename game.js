@@ -154,44 +154,129 @@ function shade(hex, k) {
   return `rgb(${f(r)},${f(g)},${f(b)})`;
 }
 
-// ---------- 무대 (불똥과 흔들림) ----------
+// ---------- 무대 (효과) ----------
+const back = $('#back'), bg = back.getContext('2d');
 const cv = $('#sword'), g = cv.getContext('2d');
 const fx = $('#fx'), fg = fx.getContext('2d');
 let W = 0, H = 0, DPR = 1, sparks = [], shake = 0, busy = false, showLevel = S.level;
+let rings = [], rays = null, flash = null, pieces = [], charge = 0, chargeTo = 0, vignette = 0, tremble = 0;
+const SW = { scale: 1, dy: 0, tint: 0, tintCol: '#ffffff' };
+const dimEl = $('#dim'), flashEl = $('#flashEl');
 function fit() {
   const r = $('#stage').getBoundingClientRect();
   DPR = Math.min(2, window.devicePixelRatio || 1); W = r.width; H = r.height;
-  [cv, fx].forEach((c) => { c.width = W * DPR; c.height = H * DPR; c.style.width = W + 'px'; c.style.height = H + 'px'; });
+  [back, cv, fx].forEach((c) => { c.width = W * DPR; c.height = H * DPR; c.style.width = W + 'px'; c.style.height = H + 'px'; });
 }
 window.addEventListener('resize', fit);
-function burst(n, col, speed = 1) {
-  for (let i = 0; i < n; i++) { const a = rand(0, Math.PI * 2), v = rand(120, 520) * speed; sparks.push({ x: W / 2 + rand(-20, 20), y: H * 0.55, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, t: 0, life: rand(0.4, 1), col, r: rand(1.5, 3.5) }); }
+const glowOf = (l) => (SWORDS[l][2] === '#000000' ? '#ffe2b0' : SWORDS[l][2]);
+// 화면에 그려지는 검의 자리 (조각내기용)
+function swordRect(l) {
+  const im = IMGS[l];
+  if (!im.complete || !im.naturalWidth) return null;
+  const sh = H * 0.94, sw = sh * im.naturalWidth / im.naturalHeight, k = Math.min(1, (W * 0.95) / sw);
+  return { im, x: (W - sw * k) / 2, y: (H - sh * k) / 2, w: sw * k, h: sh * k };
 }
-function shards(col) {
-  for (let i = 0; i < 26; i++) { const a = rand(-Math.PI, 0), v = rand(150, 480); sparks.push({ x: W / 2 + rand(-15, 15), y: rand(H * 0.25, H * 0.75), vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, life: rand(0.8, 1.4), col, r: rand(4, 9), shard: true, rot: rand(0, 6) }); }
+function burst(n, col, speed = 1, x = W / 2, y = H * 0.5, spread = Math.PI * 2, dir = 0) {
+  for (let i = 0; i < n; i++) {
+    const a = dir + rand(-spread / 2, spread / 2), v = rand(140, 560) * speed;
+    sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, life: rand(0.35, 0.9), col, r: rand(1.2, 3), streak: true });
+  }
+}
+function smoke(n, col = 'rgba(160,150,140,') {
+  for (let i = 0; i < n; i++) sparks.push({ x: W / 2 + rand(-40, 40), y: H * rand(0.3, 0.7), vx: rand(-30, 30), vy: rand(-50, -15), t: 0, life: rand(0.8, 1.4), smoke: col, r: rand(14, 28), float: true });
+}
+function ring(col, max, width = 6, life = 0.6) { rings.push({ col, max, width, t: 0, life }); }
+function flashIt(col, a) { flash = { col, a }; }
+// 검 그림을 가로로 잘라 조각으로 날린다
+function shatter(l) {
+  const rc = swordRect(l);
+  if (!rc) return;
+  const iw = rc.im.naturalWidth, ih = rc.im.naturalHeight;
+  let y0 = 0;
+  while (y0 < 1) {
+    const hf = Math.min(1 - y0, rand(0.08, 0.16));
+    pieces.push({ im: rc.im, sy: y0 * ih, sw: iw, sh: hf * ih, x: rc.x, y: rc.y + y0 * rc.h, w: rc.w, h: hf * rc.h, vx: rand(-260, 260), vy: rand(-420, -120), rot: 0, vr: rand(-7, 7), t: 0 });
+    y0 += hf;
+  }
 }
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   const t = now / 1000;
-  g.setTransform(DPR, 0, 0, DPR, 0, 0);
-  const sx = shake ? rand(-shake, shake) : 0, sy = shake ? rand(-shake, shake) : 0;
+  charge += (chargeTo - charge) * Math.min(1, dt * 5);
   shake = Math.max(0, shake - dt * 40);
-  g.save(); g.translate(sx, sy + Math.sin(t * 1.5) * 4);
-  if (showLevel >= 0) drawSword(g, showLevel, W, H, t);
-  else g.clearRect(-20, -20, W + 40, H + 40);
-  g.restore();
-  fg.setTransform(DPR, 0, 0, DPR, 0, 0); fg.clearRect(0, 0, W, H);
-  // 강화 단계가 높을수록 주변에 빛가루가 떠오른다
-  if (showLevel >= 8 && Math.random() < 0.05 + showLevel * 0.01) sparks.push({ x: W / 2 + rand(-60, 60), y: H * 0.8, vx: rand(-10, 10), vy: rand(-60, -30), t: 0, life: 2.5, col: SWORDS[showLevel][2], r: rand(1, 2.5), float: true });
-  sparks.forEach((p) => { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; if (!p.float) p.vy += 700 * dt; if (p.shard) p.rot += dt * 8; });
-  sparks = sparks.filter((p) => p.t < p.life);
-  for (const p of sparks) {
-    fg.globalAlpha = 1 - p.t / p.life; fg.fillStyle = p.col;
-    if (p.shard) { fg.save(); fg.translate(p.x, p.y); fg.rotate(p.rot); fg.beginPath(); fg.moveTo(0, -p.r); fg.lineTo(p.r * 0.5, p.r); fg.lineTo(-p.r * 0.5, p.r * 0.6); fg.closePath(); fg.fill(); fg.restore(); }
-    else { fg.beginPath(); fg.arc(p.x, p.y, p.r, 0, 7); fg.fill(); }
+  SW.scale += (1 - SW.scale) * Math.min(1, dt * 7);
+  SW.dy += (0 - SW.dy) * Math.min(1, dt * 6);
+  if (!busy) SW.tint = Math.max(0, SW.tint - dt * 2.5);
+  const cx = W / 2, cy = H * 0.45;
+  // 뒤: 달아오르는 빛 + 빛줄기
+  bg.setTransform(DPR, 0, 0, DPR, 0, 0); bg.clearRect(0, 0, W, H);
+  if (charge > 0.01) {
+    const gl = bg.createRadialGradient(cx, cy, 10, cx, cy, Math.max(W, H) * 0.5);
+    gl.addColorStop(0, `rgba(255,170,80,${0.35 * charge})`); gl.addColorStop(1, 'rgba(255,120,40,0)');
+    bg.fillStyle = gl; bg.fillRect(0, 0, W, H);
   }
-  fg.globalAlpha = 1;
+  if (rays) {
+    rays.t += dt;
+    const k = rays.t / rays.life;
+    if (k >= 1) rays = null;
+    else {
+      const a = Math.sin(Math.PI * Math.min(1, k * 1.4)) * rays.power;
+      bg.save(); bg.translate(cx, cy); bg.rotate(t * 0.6);
+      bg.globalCompositeOperation = 'lighter';
+      const L = Math.min(W, H) * (0.3 + 0.3 * Math.min(1, k * 3));
+      for (let i = 0; i < rays.n; i++) {
+        bg.rotate((Math.PI * 2) / rays.n);
+        const gr = bg.createLinearGradient(0, 0, L, 0);
+        gr.addColorStop(0, hexA(rays.col, 0.55 * a)); gr.addColorStop(1, hexA(rays.col, 0));
+        bg.fillStyle = gr; bg.beginPath(); bg.moveTo(0, 0); bg.lineTo(L, -L * 0.07); bg.lineTo(L, L * 0.07); bg.closePath(); bg.fill();
+      }
+      bg.restore();
+    }
+  }
+  // 검
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const sx = (shake ? rand(-shake, shake) : 0) + (tremble ? rand(-tremble, tremble) : 0), sy = shake ? rand(-shake, shake) : 0;
+  if (showLevel >= 0) {
+    g.save();
+    g.translate(W / 2 + sx, H / 2 + sy + SW.dy + Math.sin(t * 1.5) * 4); g.scale(SW.scale, SW.scale); g.translate(-W / 2, -H / 2);
+    drawSword(g, showLevel, W, H, t);
+    if (SW.tint > 0.01) { g.globalCompositeOperation = 'source-atop'; g.fillStyle = hexA(SW.tintCol, SW.tint); g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'source-over'; }
+    g.restore();
+  }
+  // 앞: 가장자리 어둠, 불똥, 연기, 조각, 고리, 번쩍임
+  fg.setTransform(DPR, 0, 0, DPR, 0, 0); fg.clearRect(0, 0, W, H);
+  dimEl.style.opacity = vignette.toFixed(3);
+  if (!busy) vignette = Math.max(0, vignette - dt * 1.2);
+  if (showLevel >= 8 && Math.random() < 0.05 + showLevel * 0.01) sparks.push({ x: W / 2 + rand(-60, 60), y: H * 0.85, vx: rand(-10, 10), vy: rand(-60, -30), t: 0, life: 2.5, col: glowOf(showLevel), r: rand(1, 2.5), float: true });
+  sparks.forEach((p) => { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; if (!p.float) { p.vy += 900 * dt; p.vx *= 0.99; } if (p.smoke) p.r += dt * 20; });
+  sparks = sparks.filter((p) => p.t < p.life);
+  for (const p of sparks) if (p.smoke) { fg.fillStyle = p.smoke + (0.35 * (1 - p.t / p.life)) + ')'; fg.beginPath(); fg.arc(p.x, p.y, p.r, 0, 7); fg.fill(); }
+  fg.globalCompositeOperation = 'lighter';
+  for (const p of sparks) {
+    if (p.smoke) continue;
+    const a = 1 - p.t / p.life;
+    fg.globalAlpha = a;
+    if (p.streak) { fg.strokeStyle = p.col; fg.lineWidth = p.r; fg.lineCap = 'round'; fg.beginPath(); fg.moveTo(p.x, p.y); fg.lineTo(p.x - p.vx * 0.035, p.y - p.vy * 0.035); fg.stroke(); }
+    else { fg.fillStyle = p.col; fg.beginPath(); fg.arc(p.x, p.y, p.r, 0, 7); fg.fill(); }
+  }
+  fg.globalCompositeOperation = 'source-over'; fg.globalAlpha = 1;
+  pieces.forEach((p) => { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 1100 * dt; p.rot += p.vr * dt; });
+  pieces = pieces.filter((p) => p.t < 1.6 && p.y < H + 200);
+  for (const p of pieces) {
+    fg.save(); fg.globalAlpha = Math.max(0, 1 - p.t / 1.6);
+    fg.translate(p.x + p.w / 2, p.y + p.h / 2); fg.rotate(p.rot);
+    fg.drawImage(p.im, 0, p.sy, p.sw, p.sh, -p.w / 2, -p.h / 2, p.w, p.h);
+    fg.restore();
+  }
+  rings.forEach((r) => (r.t += dt)); rings = rings.filter((r) => r.t < r.life);
+  for (const r of rings) {
+    const k = r.t / r.life, e = 1 - Math.pow(1 - k, 3);
+    fg.strokeStyle = hexA(r.col, 1 - k); fg.lineWidth = r.width * (1 - k) + 1;
+    fg.beginPath(); fg.arc(cx, cy, 20 + r.max * e, 0, 7); fg.stroke();
+  }
+  if (flash) { flashEl.style.background = flash.col; flashEl.style.opacity = Math.max(0, flash.a).toFixed(3); flash.a -= dt * 2.2; if (flash.a <= 0) { flash = null; flashEl.style.opacity = 0; } }
   requestAnimationFrame(frame);
 }
 
@@ -236,35 +321,56 @@ function enhance() {
   const cost = costOf(l) + (guardOn ? guardOf(l) : 0);
   if (S.gold < cost) { Snd.play('no'); toast('골드가 모자라요'); return; }
   S.gold -= cost; S.tries++; busy = true; save(); render();
+  // 망치 세 번: 칠 때마다 검이 달아오른다
+  const hitX = W / 2 + 8, hitY = H * 0.5;
+  chargeTo = 0.4; vignette = 0.5; SW.tintCol = '#ffd9a0';
+  [0, 300, 600].forEach((ms, i) => setTimeout(() => {
+    Snd.play('hammer'); shake = 5 + i * 3; SW.scale = 1.03;
+    SW.tint = 0.18 + i * 0.14; chargeTo = 0.4 + i * 0.25;
+    burst(14 + i * 8, i === 2 ? '#fff4c0' : '#ffb04a', 0.9 + i * 0.2, hitX, hitY, Math.PI * 1.1, -Math.PI / 2);
+    ring('#ffcf80', 60 + i * 20, 4, 0.35);
+    const hm = $('#hammer'); hm.classList.remove('hit'); void hm.offsetWidth; hm.classList.add('hit');
+  }, ms));
   $('#stage').classList.add('forging');
-  // 망치 세 번
-  const hits = [0, 280, 560];
-  hits.forEach((ms, i) => setTimeout(() => { Snd.play('hammer'); shake = 6 + i * 2; burst(10 + i * 6, i === 2 ? '#fff2a0' : '#ffb04a'); $('#hammer').classList.remove('hit'); void $('#hammer').offsetWidth; $('#hammer').classList.add('hit'); }, ms));
+  // 잠깐 숨 고르기: 하얗게 달아오른 검이 떨린다
+  setTimeout(() => { tremble = 2.5; SW.tint = 0.6; SW.tintCol = '#ffffff'; }, 820);
   setTimeout(() => {
     $('#stage').classList.remove('forging');
+    tremble = 0; chargeTo = 0;
     const [s, k, d] = ODDS[l], r = Math.random() * 100;
     if (r < s) {
       S.level = l + 1; showLevel = S.level;
       if (!S.seen.includes(S.level)) S.seen.push(S.level);
       const record = S.level > S.best; if (record) S.best = S.level;
-      const bigOne = S.level >= 10;
-      Snd.play(bigOne ? 'big' : 'success'); burst(bigOne ? 60 : 30, SWORDS[S.level][2] === '#000000' ? '#fff' : SWORDS[S.level][2], 1.2);
-      result('강화 성공!', `+${S.level} ${SWORDS[S.level][0]}${record && S.level > 1 ? ' · 최고 기록!' : ''}`, 'ok');
+      const big = S.level >= 10, col = glowOf(S.level);
+      Snd.play(big ? 'big' : 'success');
+      SW.tint = 0.9; SW.tintCol = '#ffffff'; SW.scale = big ? 1.22 : 1.12;
+      flashIt('#ffffff', big ? 0.85 : 0.55);
+      ring(col, Math.min(W, H) * 0.45, 10, 0.7);
+      if (big) setTimeout(() => ring('#ffffff', Math.min(W, H) * 0.5, 6, 0.9), 120);
+      rays = { t: 0, life: big ? 1.6 : 1.0, col, n: big ? 14 : 10, power: big ? 1 : 0.6 };
+      burst(big ? 70 : 36, col, big ? 1.4 : 1.1, W / 2, H * 0.45);
+      result('강화 성공!', `+${S.level} ${SWORDS[S.level][0]}${record && S.level > 1 ? ' · 최고 기록!' : ''}`, big ? 'ok big' : 'ok');
     } else if (r < s + k) {
-      Snd.play('keep'); result('유지', '아무 일도 일어나지 않았어요', 'keep');
+      Snd.play('keep'); SW.tint = 0.35; SW.tintCol = '#8a8078'; smoke(12);
+      result('유지', '아무 일도 일어나지 않았어요', 'keep');
     } else if (r < s + k + d) {
-      S.level = l - 1; showLevel = S.level; shake = 8;
+      S.level = l - 1; showLevel = S.level; shake = 10; SW.dy = 34; SW.tint = 0.5; SW.tintCol = '#ff5a3a';
+      flashIt('#ff3a1a', 0.3); burst(24, '#ff8a4a', 0.8, W / 2, H * 0.55, Math.PI * 0.8, Math.PI / 2);
       Snd.play('down'); result('하락…', `+${S.level}로 떨어졌어요`, 'down');
     } else if (guardOn) {
-      Snd.play('keep'); burst(30, '#8fd0ff'); result('방지권 발동!', '파괴될 뻔했지만 검을 지켰어요', 'keep');
+      Snd.play('keep'); SW.tint = 0.6; SW.tintCol = '#8fd0ff'; flashIt('#8fd0ff', 0.4);
+      ring('#8fd0ff', Math.min(W, H) * 0.45, 12, 0.8); burst(30, '#bfe6ff', 1, W / 2, H * 0.45);
+      result('방지권 발동!', '파괴될 뻔했지만 검을 지켰어요', 'keep');
     } else {
-      S.destroyed++; S.level = 0; shake = 16;
-      Snd.play('destroy'); shards(SWORDS[l][1]); showLevel = -1;
+      S.destroyed++; S.level = 0; shake = 22;
+      Snd.play('destroy'); flashIt('#ff2a1a', 0.6); shatter(l); showLevel = -1;
+      burst(40, '#ffb07a', 1.3, W / 2, H * 0.45); smoke(14, 'rgba(60,40,40,');
       result('파괴…', `+${l} ${SWORDS[l][0]}이(가) 산산조각 났어요`, 'boom');
-      setTimeout(() => { showLevel = 0; render(); }, 1400);
+      setTimeout(() => { showLevel = 0; SW.scale = 0.6; render(); }, 1500);
     }
     busy = false; save(); render();
-  }, 900);
+  }, 1100);
 }
 function sell() {
   const l = S.level;
@@ -389,6 +495,26 @@ function openBattle() {
   $('#nickIn').value = S.nick;
   $('#nickDice').onclick = () => { $('#nickIn').value = randNick(); Snd.play('click'); };
 }
+// 대결 화면 가운데에서 튀는 불꽃 (작은 캔버스를 잠깐 띄운다)
+function arenaSparks(d, n = 26, col = '#ffc070') {
+  let c = d.querySelector('.arena-fx');
+  if (!c) { c = document.createElement('canvas'); c.className = 'arena-fx'; d.append(c); }
+  const w = (c.width = d.clientWidth), h = (c.height = d.clientHeight), x = c.getContext('2d');
+  const ps = Array.from({ length: n }, () => { const a = rand(0, Math.PI * 2), v = rand(120, 420); return { x: w / 2, y: h * 0.38, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, life: rand(0.3, 0.7) }; });
+  let prev = performance.now();
+  (function step(now) {
+    const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
+    x.clearRect(0, 0, w, h); x.globalCompositeOperation = 'lighter'; x.lineCap = 'round';
+    let alive = false;
+    for (const p of ps) {
+      p.t += dt; if (p.t >= p.life) continue; alive = true;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 600 * dt;
+      x.globalAlpha = 1 - p.t / p.life; x.strokeStyle = col; x.lineWidth = 2.5;
+      x.beginPath(); x.moveTo(p.x, p.y); x.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); x.stroke();
+    }
+    if (alive) requestAnimationFrame(step); else x.clearRect(0, 0, w, h);
+  })(prev);
+}
 function fight(opp) {
   const my = S.level;
   const d = document.createElement('div'); d.className = 'arena';
@@ -411,15 +537,15 @@ function fight(opp) {
     const k = Math.min(1, (now - t0) / dur);
     pa.textContent = won(a * (1 - Math.pow(1 - k, 3)) * (k < 1 ? rand(0.9, 1.1) : 1));
     pb.textContent = won(bpow * (1 - Math.pow(1 - k, 3)) * (k < 1 ? rand(0.9, 1.1) : 1));
-    if (now - lastClash > 400 && k < 1) { lastClash = now; Snd.play('clash'); d.classList.remove('clash'); void d.offsetWidth; d.classList.add('clash'); }
+    if (now - lastClash > 480 && k < 0.95) { lastClash = now; Snd.play('clash'); d.classList.remove('clash'); void d.offsetWidth; d.classList.add('clash'); arenaSparks(d); }
     if (k < 1) return requestAnimationFrame(roll);
     const win = a >= bpow;
     const v = d.querySelector('.verdict');
     if (win) {
       const got = rewardOf(opp.level); S.gold += got; S.wins++;
-      v.innerHTML = `<b class="w">승리!</b><span>💰 ${won(got)} 골드를 얻었어요</span>`; Snd.play('win'); me.classList.add('winner');
+      v.innerHTML = `<b class="w">승리!</b><span>💰 ${won(got)} 골드를 얻었어요</span>`; Snd.play('win'); me.classList.add('winner'); op.classList.add('loser'); arenaSparks(d, 40, '#ffe08a');
     } else {
-      S.losses++; v.innerHTML = `<b class="l">패배…</b><span>검은 무사해요. 다음엔 이길 거예요!</span>`; Snd.play('lose'); op.classList.add('winner');
+      S.losses++; v.innerHTML = `<b class="l">패배…</b><span>검은 무사해요. 다음엔 이길 거예요!</span>`; Snd.play('lose'); op.classList.add('winner'); me.classList.add('loser');
     }
     save(); render();
     const again = document.createElement('div'); again.className = 'row';
