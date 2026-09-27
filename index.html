@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>검 강화하기 - 버들 대장간 | 무료 강화 게임</title>
+<meta name="description" content="녹슨 단검을 +20 천년 버들 신검까지! 성공·유지·하락·파괴 확률을 이겨내고 검을 강화해 팔고, 다른 대장장이와 랜덤 대결로 골드를 버는 무료 검 강화 게임. 매일 출석 골드도 받아요.">
+<meta property="og:title" content="검 강화하기 - 버들 대장간">
+<meta property="og:description" content="성공이냐 파괴냐! +20까지 검을 강화해 보세요.">
+<meta name="google-site-verification" content="MvUY2g0-M_AKfOrNFpUJFnytvL8OPrw4plyCOSH2vSU">
+<link rel="canonical" href="https://bbdddd0706.github.io/forge/">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <a class="home" href="../">🌿 다른 게임</a>
+    <div class="money"><span class="gold">💰 <b id="gold">0</b></span><span class="tix">⚔️ <b id="tickets">5/5</b></span></div>
+    <div class="snd"><button type="button" id="musicBtn" title="배경음악">♪</button><button type="button" id="sfxBtn" title="효과음">🔔</button></div>
+  </header>
+
+  <section class="forge">
+    <div class="title-row"><span class="lvl" id="lvl">+0</span><span class="sname" id="swordName"></span></div>
+    <div class="best" id="best"></div>
+    <div class="stage" id="stage">
+      <canvas id="sword"></canvas>
+      <canvas id="fx"></canvas>
+      <div class="hammer" id="hammer">🔨</div>
+      <div class="result" id="result"></div>
+    </div>
+    <div class="odds">
+      <div class="o s"><small>성공</small><b id="pS"></b></div>
+      <div class="o k"><small>유지</small><b id="pK"></b></div>
+      <div class="o d"><small>하락</small><b id="pD"></b></div>
+      <div class="o x" id="pXbox"><small>파괴</small><b id="pX"></b></div>
+    </div>
+    <label class="guard" id="guardRow" hidden><input type="checkbox" id="guardChk"> 🛡️ 파괴 방지권 사용 <small>(+💰<span id="guardCost"></span> · 파괴되면 대신 유지)</small></label>
+    <div class="actions">
+      <button type="button" class="btn-enhance" id="enhanceBtn"><b>강화하기</b><span id="enhanceCost"></span></button>
+      <button type="button" class="btn-sell" id="sellBtn"><b>판매</b><span id="sellPrice"></span></button>
+    </div>
+    <p class="key-hint">PC에서는 <kbd>Space</kbd>로도 강화할 수 있어요</p>
+    <div class="broke" id="broke" hidden>
+      <b>골드가 바닥났어요…</b>
+      <span>매일 출석하면 골드를 받아 다시 시작할 수 있어요.</span>
+      <button type="button" id="brokeCheck">📅 출석 체크하러 가기</button>
+    </div>
+  </section>
+
+  <nav class="menu">
+    <button type="button" id="battleBtn">⚔️<b>랜덤 대결</b></button>
+    <button type="button" id="checkBtn">📅<b>출석 체크</b><i id="checkDot"></i></button>
+    <button type="button" id="bookBtn">📖<b>검 도감</b></button>
+  </nav>
+
+  <footer class="credit">© 2026 버들 대장간 · 운영 버들(Budle) · <a href="mailto:budle2982@gmail.com">budle2982@gmail.com</a> · <a href="guide.html">게임 방법·확률표</a> · <a href="privacy.html">개인정보처리방침</a></footer>
+</div>
+
+<div class="panel" id="panel" hidden>
+  <div class="p-box">
+    <div class="p-head"><h2 id="pTitle"></h2><button type="button" id="pClose">✕</button></div>
+    <div id="pBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="audio.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
