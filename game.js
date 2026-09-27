@@ -65,7 +65,40 @@ function regenTickets() {
 }
 
 // ---------- 검 그리기 ----------
-function drawSword(c, level, w, h, t = 0, big = true) {
+// AI로 만든 검 그림 (배경을 지운 webp). 불러오기 전에는 코드 그림으로 대신한다.
+const IMGS = SWORDS.map((_, i) => { const im = new Image(); im.src = `img/s${i}.webp`; return im; });
+function drawSword(c, level, w, h, t = 0) {
+  const im = IMGS[level];
+  if (!im.complete || !im.naturalWidth) return drawSwordVector(c, level, w, h, t);
+  const glow = SWORDS[level][2];
+  c.save();
+  c.clearRect(0, 0, w, h);
+  const sh = h * 0.94, sw = sh * im.naturalWidth / im.naturalHeight;
+  const scale = Math.min(1, (w * 0.95) / sw);
+  const dw = sw * scale, dh = sh * scale, x = (w - dw) / 2, y = (h - dh) / 2;
+  // 뒤쪽 빛
+  if (level >= 3) {
+    const a = Math.min(1, 0.12 + level * 0.04) * (0.85 + 0.15 * Math.sin(t * 3));
+    const g = c.createRadialGradient(w / 2, h * 0.42, 5, w / 2, h * 0.42, Math.max(dw, dh * 0.55));
+    g.addColorStop(0, hexA(glow, a * 0.6)); g.addColorStop(1, hexA(glow, 0));
+    c.fillStyle = g; c.fillRect(0, 0, w, h);
+  }
+  if (level >= 8) { c.shadowColor = glow; c.shadowBlur = 10 + level; }
+  c.drawImage(im, x, y, dw, dh);
+  c.shadowBlur = 0;
+  // 칼날 위를 지나가는 반짝임
+  if (level >= 5) {
+    const k = (t * 0.6) % 1.6;
+    if (k < 1) {
+      c.globalCompositeOperation = 'lighter';
+      c.fillStyle = hexA('#ffffff', 0.5 * Math.sin(k * Math.PI));
+      star(c, w / 2 + (Math.sin(t) * dw * 0.05), y + dh * (0.08 + k * 0.5), 9 + level * 0.4, 2.5);
+      c.globalCompositeOperation = 'source-over';
+    }
+  }
+  c.restore();
+}
+function drawSwordVector(c, level, w, h, t = 0) {
   const [, blade, glow] = SWORDS[level];
   c.save();
   c.clearRect(0, 0, w, h);
@@ -291,8 +324,8 @@ function openBook() {
   SWORDS.forEach(([name], i) => {
     const got = S.seen.includes(i);
     const card = document.createElement('div'); card.className = 'bcard' + (got ? '' : ' locked');
-    const c = document.createElement('canvas'); c.width = 120; c.height = 200;
-    if (got) drawSword(c.getContext('2d'), i, 120, 200, 0);
+    const c = document.createElement('canvas'); c.width = 240; c.height = 400;
+    if (got) { const draw = () => drawSword(c.getContext('2d'), i, 240, 400, 0); draw(); if (!IMGS[i].complete) IMGS[i].addEventListener('load', draw, { once: true }); }
     card.append(c);
     const cap = document.createElement('div'); cap.innerHTML = `<b>+${i}</b><span></span><em></em>`;
     cap.querySelector('span').textContent = got ? name : '???';
@@ -359,13 +392,13 @@ function openBattle() {
 function fight(opp) {
   const my = S.level;
   const d = document.createElement('div'); d.className = 'arena';
-  d.innerHTML = `<div class="side me"><canvas width="140" height="230"></canvas><b></b><span></span><strong class="pow">0</strong></div>
+  d.innerHTML = `<div class="side me"><canvas width="280" height="460"></canvas><b></b><span></span><strong class="pow">0</strong></div>
     <div class="vs">VS</div>
-    <div class="side op"><canvas width="140" height="230"></canvas><b></b><span></span><strong class="pow">0</strong></div>
+    <div class="side op"><canvas width="280" height="460"></canvas><b></b><span></span><strong class="pow">0</strong></div>
     <div class="verdict"></div>`;
   const [me, op] = d.querySelectorAll('.side');
-  drawSword(me.querySelector('canvas').getContext('2d'), my, 140, 230);
-  drawSword(op.querySelector('canvas').getContext('2d'), opp.level, 140, 230);
+  drawSword(me.querySelector('canvas').getContext('2d'), my, 280, 460);
+  drawSword(op.querySelector('canvas').getContext('2d'), opp.level, 280, 460);
   me.querySelector('b').textContent = safeNick(S.nick); me.querySelector('span').textContent = `+${my} ${SWORDS[my][0]}`;
   op.querySelector('b').textContent = opp.name; op.querySelector('span').textContent = `+${opp.level} ${SWORDS[opp.level][0]}`;
   openPanel(opp.real ? '⚔️ 대결 상대를 찾았어요!' : '⚔️ 수련 대결', d);
