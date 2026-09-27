@@ -106,7 +106,9 @@ const NICK_B = ['대장장이', '고양이', '너구리', '곰돌이', '수달',
 const randNick = () => NICK_A[Math.floor(Math.random() * NICK_A.length)] + NICK_B[Math.floor(Math.random() * NICK_B.length)] + Math.floor(Math.random() * 90 + 10);
 const FRESH = () => ({ v: 1, gold: 10000, level: 0, best: 0, seen: [0], tries: 0, destroyed: 0, sold: 0, earned: 0, wins: 0, losses: 0, tickets: 5, ticketAt: Date.now(), checkDay: '', streak: 0, nick: randNick(), guard: false });
 let S = Object.assign(FRESH(), store.get('fg-save', {}));
-if (!WEAP[S.weapon]) S.weapon = 'sword';
+// +0 무기는 검·지팡이·활 중 무작위로 나온다
+const randWeapon = () => { const k = Object.keys(WEAP); return k[Math.floor(Math.random() * k.length)]; };
+if (!WEAP[S.weapon]) S.weapon = randWeapon();
 if (!S.book) S.book = { sword: Array.isArray(S.seen) ? S.seen : [0], staff: [0] };
 const W_ = () => WEAP[S.weapon];
 const items = (wp = S.weapon) => WEAP[wp].list;
@@ -348,8 +350,6 @@ function render() {
   $('#lvl').textContent = `+${l}`;
   $('#swordName').textContent = name;
   $('#lvl').style.color = items()[l][2] === '#000000' ? '#e8e0d4' : items()[l][2];
-  $('#weaponPick').hidden = l !== 0 || busy;
-  document.querySelectorAll('#weaponPick button').forEach((b) => b.classList.toggle('on', b.dataset.w === S.weapon));
   const o = l < MAX ? ODDS[l] : [0, 0, 0, 0];
   ['pS', 'pK', 'pD', 'pX'].forEach((id, i) => ($('#' + id).textContent = o[i] + '%'));
   const guardOn = S.guard && l >= GUARD_FROM && l < MAX;
@@ -426,6 +426,7 @@ function enhance() {
       result('방지권 발동!', `부서지진 않았지만 +${S.level}로 떨어졌어요`, 'down');
     } else {
       S.destroyed++; S.level = 0; shake = 22;
+      setTimeout(() => newWeapon(), 1500);
       Snd.play('destroy'); flashIt('#ff2a1a', 0.6); shatter(l); showLevel = -1;
       burst(40, '#ffb07a', 1.3, W / 2, H * 0.45); smoke(14, 'rgba(60,40,40,');
       result('파괴…', `+${l} ${items()[l][0]}이(가) 산산조각 났어요`, 'boom');
@@ -438,8 +439,8 @@ function sell() {
   const l = S.level;
   if (busy || l === 0) return;
   const p = sellOf(l);
-  confirmBox(`+${l} ${items()[l][0]}을(를) 팔까요?`, `💰 ${won(p)} 골드를 받고, +0부터 다시 시작해요. 무기 종류를 다시 고를 수 있어요.`, '팔기', () => {
-    S.gold += p; S.sold++; S.earned += p; S.level = 0; showLevel = 0; save();
+  confirmBox(`+${l} ${items()[l][0]}을(를) 팔까요?`, `💰 ${won(p)} 골드를 받고, 새 +0 무기를 받아요. 검·지팡이·활 중 무엇이 나올지는 운이에요!`, '팔기', () => {
+    S.gold += p; S.sold++; S.earned += p; S.level = 0; showLevel = 0; newWeapon(); save();
     Snd.play('coin'); burst(24, '#ffd65a'); result(`+${won(p)} 골드`, '판매 완료! +0부터 다시 시작해요', 'ok'); render();
   });
 }
@@ -635,10 +636,11 @@ $('#guardChk').onchange = (e) => { S.guard = e.target.checked; save(); render();
 $('#checkBtn').onclick = openCheck;
 $('#brokeCheck').onclick = openCheck;
 $('#bookBtn').onclick = () => openBook();
-document.querySelectorAll('#weaponPick button').forEach((b) => (b.onclick = () => {
-  if (busy || S.level !== 0 || S.weapon === b.dataset.w) return;
-  S.weapon = b.dataset.w; save(); Snd.play('click'); SW.scale = 0.8; render();
-}));
+function newWeapon() {
+  S.weapon = randWeapon(); showLevel = 0; SW.scale = 0.6; save(); render();
+  const w = WEAP[S.weapon];
+  toast(`새 무기: ${w.icon} ${w.list[0][0]}`);
+}
 $('#battleBtn').onclick = openBattle;
 function syncSnd() { $('#musicBtn').classList.toggle('off', !Snd.musicOn); $('#sfxBtn').classList.toggle('off', !Snd.sfxOn); }
 $('#musicBtn').onclick = () => { Snd.unlock(); Snd.toggleMusic(); Snd.music(true); syncSnd(); };
