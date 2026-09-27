@@ -37,6 +37,34 @@ const SWORDS = [
   ['여명의 성검', '#fff4d8', '#ffd08a'],
   ['천년 버들 신검', '#d8ffd0', '#7aff9a'],
 ];
+// 지팡이 [이름, 조각 색, 빛 색]
+const STAFFS = [
+  ['부러진 나뭇가지', '#6b5040', '#000000'],
+  ['마른 지팡이', '#8a6a48', '#000000'],
+  ['견습생의 지팡이', '#9a7a58', '#000000'],
+  ['참나무 지팡이', '#8a6a3a', '#7ad88a'],
+  ['수정 지팡이', '#e8eef8', '#c8e0ff'],
+  ['마법사의 지팡이', '#6a4a30', '#5a8cff'],
+  ['은빛 요정 지팡이', '#eef3fa', '#e8f0ff'],
+  ['달빛 지팡이', '#dce8ff', '#9fc3ff'],
+  ['황금 왕홀', '#ffd65a', '#ffc53a'],
+  ['태양의 지팡이', '#ffe38a', '#ffb02e'],
+  ['불꽃 지팡이', '#ff9a4a', '#ff6a2a'],
+  ['화산 지팡이', '#ff6a3a', '#ff3a1a'],
+  ['서리 지팡이', '#bff4ff', '#5cd6ff'],
+  ['폭풍 지팡이', '#a8d8ff', '#4aa8ff'],
+  ['번개 지팡이', '#fff6a0', '#ffe030'],
+  ['별빛 지팡이', '#e6d8ff', '#b48cff'],
+  ['용의 지팡이', '#ffb0c0', '#ff4a7a'],
+  ['심연의 지팡이', '#9a7aff', '#6a3aff'],
+  ['천공의 지팡이', '#d8fff4', '#4affc8'],
+  ['여명의 성장', '#fff4d8', '#ffd08a'],
+  ['천년 버들 신목 지팡이', '#d8ffd0', '#7aff9a'],
+];
+const WEAP = {
+  sword: { label: '검', icon: '⚔️', list: SWORDS, img: 's' },
+  staff: { label: '지팡이', icon: '🪄', list: STAFFS, img: 'w' },
+};
 const MAX = SWORDS.length - 1;
 // 강화 확률 [성공, 유지, 하락, 파괴] (%)
 const ODDS = [[100, 0, 0, 0], [95, 5, 0, 0], [90, 10, 0, 0], [85, 15, 0, 0], [80, 20, 0, 0], [75, 20, 5, 0], [70, 20, 10, 0], [65, 20, 15, 0], [60, 20, 15, 5], [55, 20, 17, 8], [50, 20, 20, 10], [45, 20, 22, 13], [40, 20, 25, 15], [35, 20, 28, 17], [30, 20, 30, 20], [25, 20, 33, 22], [20, 20, 35, 25], [15, 20, 38, 27], [10, 20, 40, 30], [5, 20, 45, 30]];
@@ -53,6 +81,11 @@ const NICK_B = ['대장장이', '고양이', '너구리', '곰돌이', '수달',
 const randNick = () => NICK_A[Math.floor(Math.random() * NICK_A.length)] + NICK_B[Math.floor(Math.random() * NICK_B.length)] + Math.floor(Math.random() * 90 + 10);
 const FRESH = () => ({ v: 1, gold: 10000, level: 0, best: 0, seen: [0], tries: 0, destroyed: 0, sold: 0, earned: 0, wins: 0, losses: 0, tickets: 5, ticketAt: Date.now(), checkDay: '', streak: 0, nick: randNick(), guard: false });
 let S = Object.assign(FRESH(), store.get('fg-save', {}));
+if (!WEAP[S.weapon]) S.weapon = 'sword';
+if (!S.book) S.book = { sword: Array.isArray(S.seen) ? S.seen : [0], staff: [0] };
+const W_ = () => WEAP[S.weapon];
+const items = (wp = S.weapon) => WEAP[wp].list;
+const book = () => S.book[S.weapon] || (S.book[S.weapon] = [0]);
 const save = () => store.set('fg-save', S);
 const device = (() => { let d = store.get('fg-device', null); if (!d) { d = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()); store.set('fg-device', d); } return d; })();
 
@@ -66,11 +99,12 @@ function regenTickets() {
 
 // ---------- 검 그리기 ----------
 // AI로 만든 검 그림 (배경을 지운 webp). 불러오기 전에는 코드 그림으로 대신한다.
-const IMGS = SWORDS.map((_, i) => { const im = new Image(); im.src = `img/s${i}.webp`; return im; });
-function drawSword(c, level, w, h, t = 0) {
-  const im = IMGS[level];
+const IMGSET = {};
+for (const [k, w] of Object.entries(WEAP)) IMGSET[k] = w.list.map((_, i) => { const im = new Image(); im.src = `img/${w.img}${i}.webp`; return im; });
+function drawSword(c, level, w, h, t = 0, wp = S.weapon) {
+  const im = IMGSET[wp][level];
   if (!im.complete || !im.naturalWidth) return drawSwordVector(c, level, w, h, t);
-  const glow = SWORDS[level][2];
+  const glow = items(wp)[level][2];
   c.save();
   c.clearRect(0, 0, w, h);
   const sh = h * 0.94, sw = sh * im.naturalWidth / im.naturalHeight;
@@ -168,10 +202,10 @@ function fit() {
   [back, cv, fx].forEach((c) => { c.width = W * DPR; c.height = H * DPR; c.style.width = W + 'px'; c.style.height = H + 'px'; });
 }
 window.addEventListener('resize', fit);
-const glowOf = (l) => (SWORDS[l][2] === '#000000' ? '#ffe2b0' : SWORDS[l][2]);
+const glowOf = (l) => (items()[l][2] === '#000000' ? '#ffe2b0' : items()[l][2]);
 // 화면에 그려지는 검의 자리 (조각내기용)
 function swordRect(l) {
-  const im = IMGS[l];
+  const im = IMGSET[S.weapon][l];
   if (!im.complete || !im.naturalWidth) return null;
   const sh = H * 0.94, sw = sh * im.naturalWidth / im.naturalHeight, k = Math.min(1, (W * 0.95) / sw);
   return { im, x: (W - sw * k) / 2, y: (H - sh * k) / 2, w: sw * k, h: sh * k };
@@ -283,12 +317,14 @@ function frame(now) {
 // ---------- 화면 갱신 ----------
 function render() {
   regenTickets();
-  const l = S.level, [name] = SWORDS[l];
+  const l = S.level, [name] = items()[l];
   $('#gold').textContent = won(S.gold);
   $('#tickets').textContent = `${S.tickets}/${TICKET_MAX}`;
   $('#lvl').textContent = `+${l}`;
   $('#swordName').textContent = name;
-  $('#lvl').style.color = SWORDS[l][2] === '#000000' ? '#e8e0d4' : SWORDS[l][2];
+  $('#lvl').style.color = items()[l][2] === '#000000' ? '#e8e0d4' : items()[l][2];
+  $('#weaponPick').hidden = l !== 0 || busy;
+  document.querySelectorAll('#weaponPick button').forEach((b) => b.classList.toggle('on', b.dataset.w === S.weapon));
   const o = l < MAX ? ODDS[l] : [0, 0, 0, 0];
   ['pS', 'pK', 'pD', 'pX'].forEach((id, i) => ($('#' + id).textContent = o[i] + '%'));
   const guardOn = S.guard && l >= GUARD_FROM && l < MAX;
@@ -340,7 +376,7 @@ function enhance() {
     const [s, k, d] = ODDS[l], r = Math.random() * 100;
     if (r < s) {
       S.level = l + 1; showLevel = S.level;
-      if (!S.seen.includes(S.level)) S.seen.push(S.level);
+      if (!book().includes(S.level)) book().push(S.level);
       const record = S.level > S.best; if (record) S.best = S.level;
       const big = S.level >= 10, col = glowOf(S.level);
       Snd.play(big ? 'big' : 'success');
@@ -350,7 +386,7 @@ function enhance() {
       if (big) setTimeout(() => ring('#ffffff', Math.min(W, H) * 0.5, 6, 0.9), 120);
       rays = { t: 0, life: big ? 1.6 : 1.0, col, n: big ? 14 : 10, power: big ? 1 : 0.6 };
       burst(big ? 70 : 36, col, big ? 1.4 : 1.1, W / 2, H * 0.45);
-      result('강화 성공!', `+${S.level} ${SWORDS[S.level][0]}${record && S.level > 1 ? ' · 최고 기록!' : ''}`, big ? 'ok big' : 'ok');
+      result('강화 성공!', `+${S.level} ${items()[S.level][0]}${record && S.level > 1 ? ' · 최고 기록!' : ''}`, big ? 'ok big' : 'ok');
     } else if (r < s + k) {
       Snd.play('keep'); SW.tint = 0.35; SW.tintCol = '#8a8078'; smoke(12);
       result('유지', '아무 일도 일어나지 않았어요', 'keep');
@@ -366,7 +402,7 @@ function enhance() {
       S.destroyed++; S.level = 0; shake = 22;
       Snd.play('destroy'); flashIt('#ff2a1a', 0.6); shatter(l); showLevel = -1;
       burst(40, '#ffb07a', 1.3, W / 2, H * 0.45); smoke(14, 'rgba(60,40,40,');
-      result('파괴…', `+${l} ${SWORDS[l][0]}이(가) 산산조각 났어요`, 'boom');
+      result('파괴…', `+${l} ${items()[l][0]}이(가) 산산조각 났어요`, 'boom');
       setTimeout(() => { showLevel = 0; SW.scale = 0.6; render(); }, 1500);
     }
     busy = false; save(); render();
@@ -376,7 +412,7 @@ function sell() {
   const l = S.level;
   if (busy || l === 0) return;
   const p = sellOf(l);
-  confirmBox(`+${l} ${SWORDS[l][0]}을(를) 팔까요?`, `💰 ${won(p)} 골드를 받고, 새 녹슨 단검으로 다시 시작해요.`, '팔기', () => {
+  confirmBox(`+${l} ${items()[l][0]}을(를) 팔까요?`, `💰 ${won(p)} 골드를 받고, +0부터 다시 시작해요. 검과 지팡이 중 다시 고를 수 있어요.`, '팔기', () => {
     S.gold += p; S.sold++; S.earned += p; S.level = 0; showLevel = 0; save();
     Snd.play('coin'); burst(24, '#ffd65a'); result(`+${won(p)} 골드`, '판매 완료! 새 검을 받았어요', 'ok'); render();
   });
@@ -422,16 +458,24 @@ function openCheck() {
 }
 
 // ---------- 도감 ----------
-function openBook() {
+function openBook(wp = S.weapon) {
   Snd.play('click');
   const d = document.createElement('div'); d.className = 'book';
-  d.innerHTML = `<p class="lead">강화에 성공해 본 검이 모여요. ${S.seen.length} / ${SWORDS.length}</p>`;
+  const seen = S.book[wp] || [0];
+  const tabs = document.createElement('div'); tabs.className = 'wtabs';
+  for (const [k, w] of Object.entries(WEAP)) {
+    const b = document.createElement('button'); b.textContent = `${w.icon} ${w.label} ${(S.book[k] || [0]).length}/${w.list.length}`;
+    if (k === wp) b.className = 'on';
+    b.onclick = () => openBook(k);
+    tabs.append(b);
+  }
+  d.append(tabs);
   const grid = document.createElement('div'); grid.className = 'grid';
-  SWORDS.forEach(([name], i) => {
-    const got = S.seen.includes(i);
+  items(wp).forEach(([name], i) => {
+    const got = seen.includes(i);
     const card = document.createElement('div'); card.className = 'bcard' + (got ? '' : ' locked');
     const c = document.createElement('canvas'); c.width = 240; c.height = 400;
-    if (got) { const draw = () => drawSword(c.getContext('2d'), i, 240, 400, 0); draw(); if (!IMGS[i].complete) IMGS[i].addEventListener('load', draw, { once: true }); }
+    if (got) { const draw = () => drawSword(c.getContext('2d'), i, 240, 400, 0, wp); draw(); if (!IMGSET[wp][i].complete) IMGSET[wp][i].addEventListener('load', draw, { once: true }); }
     card.append(c);
     const cap = document.createElement('div'); cap.innerHTML = `<b>+${i}</b><span></span><em></em>`;
     cap.querySelector('span').textContent = got ? name : '???';
@@ -444,7 +488,7 @@ function openBook() {
     const r = document.createElement('div'); r.innerHTML = '<span></span><b></b>'; r.querySelector('span').textContent = a; r.querySelector('b').textContent = b; st.append(r);
   });
   d.append(st);
-  openPanel('📖 검 도감', d);
+  openPanel('📖 무기 도감', d);
 }
 
 // ---------- 대결 ----------
@@ -524,8 +568,8 @@ function fight(opp) {
     <div class="verdict"></div>`;
   const [me, op] = d.querySelectorAll('.side');
   drawSword(me.querySelector('canvas').getContext('2d'), my, 280, 460);
-  drawSword(op.querySelector('canvas').getContext('2d'), opp.level, 280, 460);
-  me.querySelector('b').textContent = safeNick(S.nick); me.querySelector('span').textContent = `+${my} ${SWORDS[my][0]}`;
+  drawSword(op.querySelector('canvas').getContext('2d'), opp.level, 280, 460, 0, 'sword');
+  me.querySelector('b').textContent = safeNick(S.nick); me.querySelector('span').textContent = `+${my} ${items()[my][0]}`;
   op.querySelector('b').textContent = opp.name; op.querySelector('span').textContent = `+${opp.level} ${SWORDS[opp.level][0]}`;
   openPanel(opp.real ? '⚔️ 대결 상대를 찾았어요!' : '⚔️ 수련 대결', d);
   $('#pClose').hidden = true;
@@ -564,7 +608,11 @@ $('#sellBtn').onclick = () => { Snd.unlock(); sell(); };
 $('#guardChk').onchange = (e) => { S.guard = e.target.checked; save(); render(); };
 $('#checkBtn').onclick = openCheck;
 $('#brokeCheck').onclick = openCheck;
-$('#bookBtn').onclick = openBook;
+$('#bookBtn').onclick = () => openBook();
+document.querySelectorAll('#weaponPick button').forEach((b) => (b.onclick = () => {
+  if (busy || S.level !== 0 || S.weapon === b.dataset.w) return;
+  S.weapon = b.dataset.w; save(); Snd.play('click'); SW.scale = 0.8; render();
+}));
 $('#battleBtn').onclick = openBattle;
 function syncSnd() { $('#musicBtn').classList.toggle('off', !Snd.musicOn); $('#sfxBtn').classList.toggle('off', !Snd.sfxOn); }
 $('#musicBtn').onclick = () => { Snd.unlock(); Snd.toggleMusic(); Snd.music(true); syncSnd(); };

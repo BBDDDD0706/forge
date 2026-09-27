@@ -161,3 +161,9 @@ kbd{font-family:inherit;background:rgba(255,255,255,.12);border-radius:5px;paddi
 @keyframes pop{from{transform:scale(.4);opacity:0}}
 .dim{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at 50% 42%,transparent 25%,rgba(0,0,0,.9) 80%);z-index:5}
 .flash-el{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:6}
+.wpick{display:flex;gap:6px;margin-top:8px;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:99px;padding:4px}
+.wpick button{font-size:17px;font-weight:900;padding:7px 16px;border-radius:99px;color:var(--sub)}
+.wpick button.on{background:linear-gradient(#ff9a3a,#e8561a);color:#fff}
+.wtabs{display:flex;gap:8px;margin-bottom:12px}
+.wtabs button{flex:1;font-size:17px;font-weight:900;padding:10px;border-radius:12px;background:rgba(255,255,255,.06);color:var(--sub)}
+.wtabs button.on{background:rgba(255,200,61,.18);color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
